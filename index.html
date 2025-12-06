@@ -166,29 +166,7 @@
 
     <script>
         // --- Configuration ---
-        const DEMO_DATA = [
-            // Extracted from user snippet (New York)
-            [40.730329, -73.954384, 0.8],
-            [40.723780, -73.950770, 0.8],
-            [40.689802, -73.951733, 0.8],
-            [40.688529, -73.983164, 0.8],
-            [40.690635, -73.983394, 0.8],
-            [40.688741, -73.983450, 0.8],
-            
-            // Added: Walk across Manhattan Bridge
-            [40.704044, -73.989255, 0.7],
-            [40.704875, -73.989942, 0.7],
-            [40.705608, -73.990628, 0.7],
-            [40.706497, -73.991272, 0.7],
-            [40.707328, -73.991959, 0.7],
-            [40.708159, -73.992645, 0.7],
-            
-            // Added: Lower Manhattan Cluster
-            [40.712743, -74.005974, 0.9],
-            [40.713500, -74.006200, 0.9],
-            [40.714000, -74.005500, 0.9],
-            [40.711500, -74.009000, 0.6],
-        ];
+        const DEMO_DATA_URL = 'https://raw.githubusercontent.com/ry-li/google-maps-timeline-heatmap/refs/heads/main/location-history.json';
 
         // --- DOM Elements ---
         const dropOverlay = document.getElementById('drop-overlay');
@@ -248,7 +226,7 @@
         darkLayer.addTo(map); // Default
 
         // --- State ---
-        let points = [...DEMO_DATA];
+        let points = [];
         let heatLayer = null;
 
         // --- Heatmap Initialization (Safe Mode) ---
@@ -272,7 +250,6 @@
                         }
                     });
                     heatLayer.addTo(map);
-                    pointCountDisplay.innerText = `${points.length} pts (Demo)`;
                 }
             }
         }
@@ -427,6 +404,27 @@
             setStatus('Reading file...', true);
             reader.readAsText(file);
         }
+
+        // --- Load Demo Data ---
+        setStatus('Loading demo data...', true);
+        fetch(DEMO_DATA_URL)
+            .then(response => {
+                if (!response.ok) throw new Error("Network response was not ok");
+                return response.json();
+            })
+            .then(data => {
+                processData(data);
+                // Wait for processData to update text, then append (Demo)
+                setTimeout(() => {
+                    if (pointCountDisplay.innerText.includes('pts')) {
+                        pointCountDisplay.innerText = pointCountDisplay.innerText + " (Demo)";
+                    }
+                }, 200);
+            })
+            .catch(error => {
+                console.error("Error loading demo data:", error);
+                setStatus("Failed to load demo data. Please drop a JSON file.", false);
+            });
 
         // --- Event Listeners ---
 
