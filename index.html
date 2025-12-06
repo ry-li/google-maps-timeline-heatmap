@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Location History Heatmap</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <!-- Leaflet Heat -->
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+    <style>
+        body, html { height: 100%; margin: 0; padding: 0; background-color: #1a1a1a; }
+        #map { height: 100%; width: 100%; z-index: 0; }
+        
+        /* Custom scrollbar for controls */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #2d3748; 
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #4a5568; 
+            border-radius: 3px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: #718096; 
+        }
+
+        /* Drag over overlay */
+        #drop-overlay {
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            opacity: 0;
+        }
+        #drop-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="font-sans text-gray-200 antialiased overflow-hidden">
+
+    <!-- Map Container -->
+    <div id="map" class="absolute inset-0"></div>
+
+    <!-- Drag & Drop Overlay -->
+    <div id="drop-overlay" class="absolute inset-0 z-[1000] flex flex-col items-center justify-center text-white">
+        <div class="text-6xl mb-4">📂</div>
+        <h2 class="text-3xl font-bold mb-2">Drop JSON File Here</h2>
+        <p class="text-gray-300">Process Google Location History locally</p>
+    </div>
+
+    <!-- Floating Control Panel -->
+    <div class="absolute top-4 right-4 z-[999] w-80 bg-gray-900/90 backdrop-blur-md border border-gray-700 rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <!-- Header -->
+        <div class="p-4 border-b border-gray-700 bg-gray-800/50 flex justify-between items-center">
+            <h1 class="text-lg font-bold text-white flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                Heatmap Vis
+            </h1>
+            <span id="point-count" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded text-gray-300">0 pts</span>
+        </div>
+
+        <!-- Controls (Scrollable) -->
+        <div class="p-4 space-y-6 overflow-y-auto custom-scroll flex-1">
+            
+            <!-- File Input -->
+            <div class="space-y-2">
+                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Data Source</label>
+                <div class="relative group">
+                    <input type="file" id="file-input" accept=".json" class="hidden" />
+                    <label for="file-input" class="cursor-pointer flex items-center justify-center w-full px-4 py-3 bg-gray-800 border-2 border-dashed border-gray-600 rounded-lg hover:border-blue-500 hover:bg-gray-750 transition-all group-hover:text-blue-400">
+                        <span class="text-sm font-medium">Click to Upload JSON</span>
+                    </label>
+                </div>
+                <div class="flex justify-between text-xs text-gray-500">
+                    <span>Supported: Google Maps Timeline data</span>
+                </div>
+            </div>
+
+            <hr class="border-gray-700">
+
+            <!-- Visualization Settings -->
+            <div class="space-y-4">
+                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Heatmap Settings</label>
+                
+                <!-- Radius -->
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <label class="text-xs text-gray-300">Radius</label>
+                        <span id="radius-val" class="text-xs font-mono text-blue-400">15</span>
+                    </div>
+                    <input type="range" id="radius-range" min="2" max="50" value="15" class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                </div>
+
+                <!-- Blur -->
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <label class="text-xs text-gray-300">Blur</label>
+                        <span id="blur-val" class="text-xs font-mono text-blue-400">15</span>
+                    </div>
+                    <input type="range" id="blur-range" min="5" max="50" value="15" class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                </div>
+
+                <!-- Intensity / Max Zoom -->
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <label class="text-xs text-gray-300">Intensity Scale (MaxZoom)</label>
+                        <span id="maxzoom-val" class="text-xs font-mono text-blue-400">10</span>
+                    </div>
+                    <input type="range" id="maxzoom-range" min="1" max="18" value="10" class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                    <p class="text-[10px] text-gray-500 mt-1">Lower value = hotter map</p>
+                </div>
+            </div>
+
+            <hr class="border-gray-700">
+
+            <!-- Map Style -->
+            <div class="space-y-2">
+                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Base Map</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="btn-dark" class="px-3 py-2 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors border border-transparent ring-2 ring-blue-400 ring-offset-2 ring-offset-gray-900">Dark</button>
+                    <button id="btn-light" class="px-3 py-2 text-xs font-medium bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors border border-transparent">Light</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Footer -->
+        <div class="p-3 bg-gray-800 border-t border-gray-700 flex flex-col gap-2">
+            <div id="status-bar" class="text-xs text-gray-400 flex items-center gap-2 hidden">
+                <div class="loader w-4 h-4 border-2"></div>
+                <span id="status-text">Processing...</span>
+            </div>
+            
+            <div class="text-xs text-gray-500 flex flex-col gap-1">
+                <p>Repository: <a href="https://github.com/ry-li/google-maps-timeline-heatmap" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline">ry-li/google-maps-timeline-heatmap</a></p>
+                <p>&copy; <a href="https://r-li.com" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline">Ruoyu Li</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const DEMO_DATA = [
+            // Extracted from user snippet (New York)
+            [40.730329, -73.954384, 0.8],
+            [40.723780, -73.950770, 0.8],
+            [40.689802, -73.951733, 0.8],
+            [40.688529, -73.983164, 0.8],
+            [40.690635, -73.983394, 0.8],
+            [40.688741, -73.983450, 0.8],
+            
+            // Added: Walk across Manhattan Bridge
+            [40.704044, -73.989255, 0.7],
+            [40.704875, -73.989942, 0.7],
+            [40.705608, -73.990628, 0.7],
+            [40.706497, -73.991272, 0.7],
+            [40.707328, -73.991959, 0.7],
+            [40.708159, -73.992645, 0.7],
+            
+            // Added: Lower Manhattan Cluster
+            [40.712743, -74.005974, 0.9],
+            [40.713500, -74.006200, 0.9],
+            [40.714000, -74.005500, 0.9],
+            [40.711500, -74.009000, 0.6],
+        ];
+
+        // --- DOM Elements ---
+        const dropOverlay = document.getElementById('drop-overlay');
+        const fileInput = document.getElementById('file-input');
+        const statusBar = document.getElementById('status-bar');
+        const statusText = document.getElementById('status-text');
+        const pointCountDisplay = document.getElementById('point-count');
+        
+        const radiusRange = document.getElementById('radius-range');
+        const blurRange = document.getElementById('blur-range');
+        const maxZoomRange = document.getElementById('maxzoom-range');
+        
+        const radiusVal = document.getElementById('radius-val');
+        const blurVal = document.getElementById('blur-val');
+        const maxZoomVal = document.getElementById('maxzoom-val');
+
+        const btnDark = document.getElementById('btn-dark');
+        const btnLight = document.getElementById('btn-light');
+
+        // --- Map Initialization ---
+        const map = L.map('map', {
+            zoomControl: false,
+            attributionControl: false,
+            // Restrict panning to the world bounds so users can't pan into gray space
+            maxBounds: [[-85.0511, -180], [85.0511, 180]],
+            maxBoundsViscosity: 1.0
+        }).setView([40.7128, -74.0060], 11);
+
+        // Dynamic MinZoom: Prevents zooming out smaller than the container height
+        function updateMinZoom() {
+            const mapHeight = map.getSize().y;
+            if (mapHeight > 0) {
+                // World height is 256px * 2^zoom. 
+                // We want: 256 * 2^minZoom >= mapHeight
+                // Solved: minZoom >= log2(mapHeight / 256)
+                const minZoom = Math.ceil(Math.log2(mapHeight / 256));
+                map.setMinZoom(minZoom);
+            }
+        }
+        
+        // Controls
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+        L.control.attribution({ position: 'bottomleft' }).addTo(map);
+
+        // Tile Layers
+        const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 20
+        });
+
+        const lightLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        });
+
+        darkLayer.addTo(map); // Default
+
+        // --- State ---
+        let points = [...DEMO_DATA];
+        let heatLayer = null;
+
+        // --- Heatmap Initialization (Safe Mode) ---
+        // Prevents IndexSizeError if map container has 0 width/height initially
+        function initHeatmap() {
+            const size = map.getSize();
+            // Ensure map has valid dimensions before adding heatmap
+            if (size.x > 0 && size.y > 0) {
+                if (!heatLayer) {
+                    heatLayer = L.heatLayer(points, {
+                        radius: 15,
+                        blur: 15,
+                        maxZoom: 10,
+                        max: 1.0,
+                        gradient: {
+                            0.0: 'blue',
+                            0.4: 'cyan',
+                            0.6: 'lime',
+                            0.8: 'yellow',
+                            1.0: 'red'
+                        }
+                    });
+                    heatLayer.addTo(map);
+                    pointCountDisplay.innerText = `${points.length} pts (Demo)`;
+                }
+            }
+        }
+
+        // Apply immediately
+        initHeatmap();
+        updateMinZoom();
+
+        // Retry on resize (handles cases where container starts hidden/small)
+        map.on('resize', () => {
+            initHeatmap();
+            updateMinZoom();
+        });
+
+        // --- Functions ---
+
+        function updateHeatmap() {
+            if (!heatLayer) return;
+            heatLayer.setOptions({
+                radius: parseInt(radiusRange.value),
+                blur: parseInt(blurRange.value),
+                maxZoom: parseInt(maxZoomRange.value)
+            });
+            heatLayer.redraw();
+        }
+
+        function setStatus(msg, loading = false) {
+            statusBar.classList.remove('hidden');
+            statusText.innerText = msg;
+            statusBar.querySelector('.loader').style.display = loading ? 'block' : 'none';
+            if (!loading && !msg) statusBar.classList.add('hidden');
+        }
+
+        function parseCoordinates(str) {
+            // Parses "geo:40.730329,-73.954384"
+            if (!str || typeof str !== 'string') return null;
+            if (str.startsWith('geo:')) {
+                const parts = str.substring(4).split(',');
+                if (parts.length >= 2) {
+                    const lat = parseFloat(parts[0]);
+                    const lng = parseFloat(parts[1]);
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        return [lat, lng];
+                    }
+                }
+            }
+            return null;
+        }
+
+        function processData(jsonData) {
+            setStatus('Parsing locations...', true);
+            
+            // Use setTimeout to allow UI to render status
+            setTimeout(() => {
+                const newPoints = [];
+                let count = 0;
+
+                try {
+                    // Normalize input: it might be an array (snippets) or object (full export)
+                    const items = Array.isArray(jsonData) ? jsonData : 
+                                  (jsonData.locations ? jsonData.locations : [jsonData]);
+
+                    // Helper to push point
+                    const addPoint = (lat, lng) => {
+                        // Simple bounds check
+                        if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                            newPoints.push([lat, lng, 0.5]); // 0.5 default intensity
+                            count++;
+                        }
+                    };
+
+                    // Deep traversal helper for complex JSON
+                    const traverse = (obj) => {
+                        if (!obj || typeof obj !== 'object') return;
+
+                        if (Array.isArray(obj)) {
+                            for (let i = 0; i < obj.length; i++) {
+                                traverse(obj[i]);
+                            }
+                            return;
+                        }
+
+                        // 1. "geo:" strings (Modern format)
+                        ['placeLocation', 'point', 'start', 'end'].forEach(key => {
+                            if (obj[key] && typeof obj[key] === 'string' && obj[key].startsWith('geo:')) {
+                                const coords = parseCoordinates(obj[key]);
+                                if (coords) addPoint(coords[0], coords[1]);
+                            }
+                        });
+
+                        // 2. "latitudeE7" (Legacy/Raw format)
+                        if (obj.latitudeE7 && obj.longitudeE7) {
+                            addPoint(obj.latitudeE7 / 1e7, obj.longitudeE7 / 1e7);
+                        }
+
+                        // Recursion for nested objects
+                        if (obj.timelinePath) traverse(obj.timelinePath);
+                        if (obj.visit) traverse(obj.visit);
+                        if (obj.activity) traverse(obj.activity);
+                        if (obj.topCandidate) traverse(obj.topCandidate);
+                    };
+
+                    // Process items
+                    if (Array.isArray(items)) {
+                        items.forEach(item => traverse(item));
+                    } else {
+                        traverse(items);
+                    }
+
+                    if (newPoints.length > 0) {
+                        points = newPoints;
+                        
+                        // Update existing heat layer or try to create it if map was previously invalid
+                        if (heatLayer) {
+                            heatLayer.setLatLngs(points);
+                        } else {
+                            // If map was 0x0 before, this gives it another shot with new points
+                            initHeatmap(); 
+                        }
+                        
+                        // Fit bounds
+                        const bounds = L.latLngBounds(points.map(p => [p[0], p[1]]));
+                        if (bounds.isValid()) {
+                            map.fitBounds(bounds, { padding: [50, 50] });
+                        }
+                        
+                        pointCountDisplay.innerText = `${count.toLocaleString()} pts`;
+                        setStatus(`Loaded ${count.toLocaleString()} locations.`, false);
+                    } else {
+                        setStatus('No valid location data found in JSON.', false);
+                    }
+
+                } catch (e) {
+                    console.error(e);
+                    setStatus('Error processing JSON file.', false);
+                }
+            }, 100);
+        }
+
+        function handleFile(file) {
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const json = JSON.parse(e.target.result);
+                    processData(json);
+                } catch (err) {
+                    setStatus('Invalid JSON file.', false);
+                }
+            };
+            setStatus('Reading file...', true);
+            reader.readAsText(file);
+        }
+
+        // --- Event Listeners ---
+
+        // UI Inputs
+        radiusRange.addEventListener('input', (e) => {
+            radiusVal.innerText = e.target.value;
+            updateHeatmap();
+        });
+        blurRange.addEventListener('input', (e) => {
+            blurVal.innerText = e.target.value;
+            updateHeatmap();
+        });
+        maxZoomRange.addEventListener('input', (e) => {
+            maxZoomVal.innerText = e.target.value;
+            updateHeatmap();
+        });
+
+        // Map Style Toggles
+        btnDark.addEventListener('click', () => {
+            map.removeLayer(lightLayer);
+            darkLayer.addTo(map);
+            btnDark.classList.add('ring-2', 'ring-blue-400', 'ring-offset-2', 'ring-offset-gray-900', 'bg-blue-600', 'text-white');
+            btnDark.classList.remove('bg-gray-700', 'text-gray-300');
+            btnLight.classList.remove('ring-2', 'ring-blue-400', 'ring-offset-2', 'ring-offset-gray-900', 'bg-blue-600', 'text-white');
+            btnLight.classList.add('bg-gray-700', 'text-gray-300');
+        });
+
+        btnLight.addEventListener('click', () => {
+            map.removeLayer(darkLayer);
+            lightLayer.addTo(map);
+            btnLight.classList.add('ring-2', 'ring-blue-400', 'ring-offset-2', 'ring-offset-gray-900', 'bg-blue-600', 'text-white');
+            btnLight.classList.remove('bg-gray-700', 'text-gray-300');
+            btnDark.classList.remove('ring-2', 'ring-blue-400', 'ring-offset-2', 'ring-offset-gray-900', 'bg-blue-600', 'text-white');
+            btnDark.classList.add('bg-gray-700', 'text-gray-300');
+        });
+
+        // File Input
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        // Drag and Drop
+        window.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            dropOverlay.classList.add('active');
+        });
+        
+        dropOverlay.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropOverlay.classList.remove('active');
+        });
+        
+        dropOverlay.addEventListener('dragover', (e) => {
+            e.preventDefault(); 
+        });
+        
+        dropOverlay.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropOverlay.classList.remove('active');
+            if (e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+    </script>
+</body>
+</html>
