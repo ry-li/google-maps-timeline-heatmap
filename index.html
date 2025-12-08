@@ -89,22 +89,23 @@
     </div>
 
     <!-- Floating Control Panel -->
-    <div id="control-panel" class="absolute top-4 right-4 z-[999] w-80 max-w-[calc(100vw-2rem)] bg-gray-900/90 backdrop-blur-md border border-gray-700 rounded-xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ease-in-out max-h-[90vh]">
+    <div id="control-panel" class="absolute top-4 right-4 z-[999] w-80 max-w-[calc(100vw-2rem)] bg-gray-900/95 backdrop-blur-md border border-gray-700 rounded-xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ease-in-out max-h-[90vh]">
         <!-- Header -->
-        <div id="panel-header" class="p-4 border-b border-gray-700 bg-gray-800/50 flex justify-between items-center cursor-pointer hover:bg-gray-800/80 transition-colors select-none">
-            <div class="flex items-center gap-3 overflow-hidden">
+        <div id="panel-header" class="p-4 border-b border-gray-700 bg-gray-800/50 flex justify-between items-center cursor-pointer hover:bg-gray-800/80 transition-colors select-none group">
+            <div class="flex items-center gap-3 overflow-hidden flex-1 mr-4">
                 <h1 class="text-lg font-bold text-white flex items-center gap-2 whitespace-nowrap">
                     <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
                     Heatmap Vis
                 </h1>
                 <span id="point-count" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded text-gray-300 truncate">0 pts</span>
             </div>
-            <!-- Toggle Button Icon -->
-            <div id="toggle-icon" class="text-gray-400 transform transition-transform duration-300">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            
+            <!-- Distinct Header Toggle Button -->
+            <button id="header-toggle-btn" class="flex-shrink-0 p-2 bg-gray-700 group-hover:bg-gray-600 rounded-lg text-gray-300 hover:text-white transition-all shadow-md border border-gray-600">
+                <svg id="header-chevron" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transform transition-transform duration-300" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" />
                 </svg>
-            </div>
+            </button>
         </div>
 
         <!-- Collapsible Content Wrapper -->
@@ -175,6 +176,14 @@
 
             <!-- Status Footer -->
             <div class="p-3 bg-gray-800 border-t border-gray-700 flex flex-col gap-2">
+                <!-- New Bottom Collapse Button -->
+                <button id="bottom-toggle-btn" class="w-full py-2 bg-gray-700/50 hover:bg-gray-700 rounded text-xs font-bold text-gray-400 hover:text-white uppercase tracking-wider transition-colors flex items-center justify-center gap-2 mb-2">
+                    <span>Hide Controls</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+
                 <div id="status-bar" class="text-xs text-gray-400 flex items-center gap-2 hidden">
                     <div class="loader w-4 h-4 border-2"></div>
                     <span id="status-text">Processing...</span>
@@ -202,7 +211,8 @@
         // Panel Toggle Elements
         const panelHeader = document.getElementById('panel-header');
         const panelContent = document.getElementById('panel-content');
-        const toggleIcon = document.getElementById('toggle-icon');
+        const headerChevron = document.getElementById('header-chevron');
+        const bottomToggleBtn = document.getElementById('bottom-toggle-btn');
         
         const radiusRange = document.getElementById('radius-range');
         const blurRange = document.getElementById('blur-range');
@@ -218,18 +228,29 @@
         // --- Toggle Logic ---
         let isMinimized = false;
         
-        panelHeader.addEventListener('click', () => {
+        function togglePanel(e) {
+            // Prevent event bubbling if clicking button vs header
+            if(e) e.stopPropagation();
+            
             isMinimized = !isMinimized;
+            
             if (isMinimized) {
+                // Minimize
                 panelContent.style.display = 'none';
-                toggleIcon.style.transform = 'rotate(180deg)';
-                panelHeader.classList.add('rounded-b-xl'); // Clean look when closed
+                headerChevron.style.transform = 'rotate(180deg)';
+                panelHeader.classList.add('rounded-b-xl');
             } else {
+                // Expand
                 panelContent.style.display = 'flex';
-                toggleIcon.style.transform = 'rotate(0deg)';
+                headerChevron.style.transform = 'rotate(0deg)';
                 panelHeader.classList.remove('rounded-b-xl');
             }
-        });
+        }
+
+        // Add listeners to header, header button, and bottom button
+        // Note: Header click covers the whole header area
+        panelHeader.addEventListener('click', togglePanel);
+        bottomToggleBtn.addEventListener('click', togglePanel);
 
         // --- Map Initialization ---
         const map = L.map('map', {
