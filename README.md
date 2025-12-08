@@ -1,6 +1,6 @@
 # Google Maps Timeline Heatmap Visualizer
 
-An open-source Google Maps Timeline heatmap visualization tool on HTML with options to customize various visualization parameters.
+A mobile-friendly open-source Google Maps Timeline heatmap visualization tool on HTML with options to customize various visualization parameters.
 
 | File | About |
 | --- | --- |
