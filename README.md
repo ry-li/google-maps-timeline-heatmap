@@ -1,6 +1,6 @@
 # Google Maps Timeline Heatmap Visualizer
 
-Open-Source Google Maps Timeline Heatmap Visualization
+Open-Source Google Maps Timeline heatmap visualization tool
 
 | File | About |
 | --- | --- |
