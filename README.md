@@ -20,6 +20,10 @@ Download ***index.html*** to use locally or customize it as needed.
 
 <img src="pics/pic-2.png" style="width:100%;">
 
+Minimize the control panel:
+
+<img src="pics/pic-3.png" style="width:100%;">
+
 
 ## How to export Google Maps Timeline data:
 
