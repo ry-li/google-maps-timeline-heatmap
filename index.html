@@ -89,90 +89,101 @@
     </div>
 
     <!-- Floating Control Panel -->
-    <div class="absolute top-4 right-4 z-[999] w-80 bg-gray-900/90 backdrop-blur-md border border-gray-700 rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div id="control-panel" class="absolute top-4 right-4 z-[999] w-80 max-w-[calc(100vw-2rem)] bg-gray-900/90 backdrop-blur-md border border-gray-700 rounded-xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ease-in-out max-h-[90vh]">
         <!-- Header -->
-        <div class="p-4 border-b border-gray-700 bg-gray-800/50 flex justify-between items-center">
-            <h1 class="text-lg font-bold text-white flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                Heatmap Vis
-            </h1>
-            <span id="point-count" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded text-gray-300">0 pts</span>
+        <div id="panel-header" class="p-4 border-b border-gray-700 bg-gray-800/50 flex justify-between items-center cursor-pointer hover:bg-gray-800/80 transition-colors select-none">
+            <div class="flex items-center gap-3 overflow-hidden">
+                <h1 class="text-lg font-bold text-white flex items-center gap-2 whitespace-nowrap">
+                    <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                    Heatmap Vis
+                </h1>
+                <span id="point-count" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded text-gray-300 truncate">0 pts</span>
+            </div>
+            <!-- Toggle Button Icon -->
+            <div id="toggle-icon" class="text-gray-400 transform transition-transform duration-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" />
+                </svg>
+            </div>
         </div>
 
-        <!-- Controls (Scrollable) -->
-        <div class="p-4 space-y-6 overflow-y-auto custom-scroll flex-1">
-            
-            <!-- File Input -->
-            <div class="space-y-2">
-                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Data Source</label>
-                <div class="relative group">
-                    <input type="file" id="file-input" accept=".json" class="hidden" />
-                    <label for="file-input" class="cursor-pointer flex items-center justify-center w-full px-4 py-3 bg-gray-800 border-2 border-dashed border-gray-600 rounded-lg hover:border-blue-500 hover:bg-gray-750 transition-all group-hover:text-blue-400">
-                        <span class="text-sm font-medium">Click to Upload JSON</span>
-                    </label>
-                </div>
-                <div class="flex justify-between text-xs text-gray-500">
-                    <span>Supported: Google Maps Timeline data</span>
-                </div>
-            </div>
-
-            <hr class="border-gray-700">
-
-            <!-- Visualization Settings -->
-            <div class="space-y-4">
-                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Heatmap Settings</label>
+        <!-- Collapsible Content Wrapper -->
+        <div id="panel-content" class="flex flex-col flex-1 overflow-hidden">
+            <!-- Controls (Scrollable) -->
+            <div class="p-4 space-y-6 overflow-y-auto custom-scroll flex-1">
                 
-                <!-- Radius -->
-                <div>
-                    <div class="flex justify-between mb-1">
-                        <label class="text-xs text-gray-300">Radius</label>
-                        <span id="radius-val" class="text-xs font-mono text-blue-400">15</span>
+                <!-- File Input -->
+                <div class="space-y-2">
+                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Data Source</label>
+                    <div class="relative group">
+                        <input type="file" id="file-input" accept=".json" class="hidden" />
+                        <label for="file-input" class="cursor-pointer flex items-center justify-center w-full px-4 py-3 bg-gray-800 border-2 border-dashed border-gray-600 rounded-lg hover:border-blue-500 hover:bg-gray-750 transition-all group-hover:text-blue-400">
+                            <span class="text-sm font-medium">Click to Upload JSON</span>
+                        </label>
                     </div>
-                    <input type="range" id="radius-range" min="2" max="50" value="15" class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                    <div class="flex justify-between text-xs text-gray-500">
+                        <span>Supported: Google Maps Timeline data</span>
+                    </div>
                 </div>
 
-                <!-- Blur -->
-                <div>
-                    <div class="flex justify-between mb-1">
-                        <label class="text-xs text-gray-300">Blur</label>
-                        <span id="blur-val" class="text-xs font-mono text-blue-400">15</span>
+                <hr class="border-gray-700">
+
+                <!-- Visualization Settings -->
+                <div class="space-y-4">
+                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Heatmap Settings</label>
+                    
+                    <!-- Radius -->
+                    <div>
+                        <div class="flex justify-between mb-1">
+                            <label class="text-xs text-gray-300">Radius</label>
+                            <span id="radius-val" class="text-xs font-mono text-blue-400">15</span>
+                        </div>
+                        <input type="range" id="radius-range" min="2" max="50" value="15" class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
                     </div>
-                    <input type="range" id="blur-range" min="5" max="50" value="15" class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+
+                    <!-- Blur -->
+                    <div>
+                        <div class="flex justify-between mb-1">
+                            <label class="text-xs text-gray-300">Blur</label>
+                            <span id="blur-val" class="text-xs font-mono text-blue-400">15</span>
+                        </div>
+                        <input type="range" id="blur-range" min="5" max="50" value="15" class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                    </div>
+
+                    <!-- Intensity / Max Zoom -->
+                    <div>
+                        <div class="flex justify-between mb-1">
+                            <label class="text-xs text-gray-300">Intensity Scale (MaxZoom)</label>
+                            <span id="maxzoom-val" class="text-xs font-mono text-blue-400">10</span>
+                        </div>
+                        <input type="range" id="maxzoom-range" min="1" max="18" value="10" class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                        <p class="text-[10px] text-gray-500 mt-1">Lower value = hotter map</p>
+                    </div>
                 </div>
 
-                <!-- Intensity / Max Zoom -->
-                <div>
-                    <div class="flex justify-between mb-1">
-                        <label class="text-xs text-gray-300">Intensity Scale (MaxZoom)</label>
-                        <span id="maxzoom-val" class="text-xs font-mono text-blue-400">10</span>
+                <hr class="border-gray-700">
+
+                <!-- Map Style -->
+                <div class="space-y-2">
+                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Base Map</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="btn-dark" class="px-3 py-2 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors border border-transparent ring-2 ring-blue-400 ring-offset-2 ring-offset-gray-900">Dark</button>
+                        <button id="btn-light" class="px-3 py-2 text-xs font-medium bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors border border-transparent">Light</button>
                     </div>
-                    <input type="range" id="maxzoom-range" min="1" max="18" value="10" class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
-                    <p class="text-[10px] text-gray-500 mt-1">Lower value = hotter map</p>
                 </div>
             </div>
 
-            <hr class="border-gray-700">
-
-            <!-- Map Style -->
-            <div class="space-y-2">
-                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Base Map</label>
-                <div class="grid grid-cols-2 gap-2">
-                    <button id="btn-dark" class="px-3 py-2 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors border border-transparent ring-2 ring-blue-400 ring-offset-2 ring-offset-gray-900">Dark</button>
-                    <button id="btn-light" class="px-3 py-2 text-xs font-medium bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors border border-transparent">Light</button>
+            <!-- Status Footer -->
+            <div class="p-3 bg-gray-800 border-t border-gray-700 flex flex-col gap-2">
+                <div id="status-bar" class="text-xs text-gray-400 flex items-center gap-2 hidden">
+                    <div class="loader w-4 h-4 border-2"></div>
+                    <span id="status-text">Processing...</span>
                 </div>
-            </div>
-        </div>
-
-        <!-- Status Footer -->
-        <div class="p-3 bg-gray-800 border-t border-gray-700 flex flex-col gap-2">
-            <div id="status-bar" class="text-xs text-gray-400 flex items-center gap-2 hidden">
-                <div class="loader w-4 h-4 border-2"></div>
-                <span id="status-text">Processing...</span>
-            </div>
-            
-            <div class="text-xs text-gray-500 flex flex-col gap-1">
-                <p>Repository: <a href="https://github.com/ry-li/google-maps-timeline-heatmap" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline">ry-li/google-maps-timeline-heatmap</a></p>
-                <p>&copy; <a href="https://r-li.com" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline">Ruoyu Li</a></p>
+                
+                <div class="text-xs text-gray-500 flex flex-col gap-1">
+                    <p>Repository: <a href="https://github.com/ry-li/google-maps-timeline-heatmap" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline">ry-li/google-maps-timeline-heatmap</a></p>
+                    <p>&copy; <a href="https://r-li.com" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline">Ruoyu Li</a></p>
+                </div>
             </div>
         </div>
     </div>
@@ -188,6 +199,11 @@
         const statusText = document.getElementById('status-text');
         const pointCountDisplay = document.getElementById('point-count');
         
+        // Panel Toggle Elements
+        const panelHeader = document.getElementById('panel-header');
+        const panelContent = document.getElementById('panel-content');
+        const toggleIcon = document.getElementById('toggle-icon');
+        
         const radiusRange = document.getElementById('radius-range');
         const blurRange = document.getElementById('blur-range');
         const maxZoomRange = document.getElementById('maxzoom-range');
@@ -198,6 +214,22 @@
 
         const btnDark = document.getElementById('btn-dark');
         const btnLight = document.getElementById('btn-light');
+
+        // --- Toggle Logic ---
+        let isMinimized = false;
+        
+        panelHeader.addEventListener('click', () => {
+            isMinimized = !isMinimized;
+            if (isMinimized) {
+                panelContent.style.display = 'none';
+                toggleIcon.style.transform = 'rotate(180deg)';
+                panelHeader.classList.add('rounded-b-xl'); // Clean look when closed
+            } else {
+                panelContent.style.display = 'flex';
+                toggleIcon.style.transform = 'rotate(0deg)';
+                panelHeader.classList.remove('rounded-b-xl');
+            }
+        });
 
         // --- Map Initialization ---
         const map = L.map('map', {
