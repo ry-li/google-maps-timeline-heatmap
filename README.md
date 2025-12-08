@@ -1,4 +1,4 @@
-# google-maps-timeline-heatmap
+# Google Maps Timeline Heatmap Visualizer
 
 Open-Source Google Maps Timeline Heatmap Visualization
 
